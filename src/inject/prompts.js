@@ -315,6 +315,9 @@ window.prompts = {
       {
         title: "anime",
         img: "CleanShot 2022-07-14 at 22.28.06@2x.jpg",
+        img1: "anime1.jpg",
+        img2: "anime2.jpg",
+        img3: "anime3.jpg",
         description: "anime, manga, manga art",
         type: "toggle",
         variants: ["anime", "manga"],

@@ -114,10 +114,24 @@ let constructUi = function () {
                 
 								data-variants="${item.variants.join(",")}"
 								data-type="${item.type}">${item.title}`;
-        if (item.img) {
-          promptHtml += `<div class="preview-image"><img src="${IMAGES_URL}${item.img}" alt="${item.title}"/></div>`;
+        if (item.img) 
+        {
+            promptHtml += `<div class="preview-image"><img id="main-image" src="${IMAGES_URL}${item.img}" alt="${item.title}"/>`;
+            if (item.img1) 
+            {
+                promptHtml += `<div class="bonus-image-1"><img src="${IMAGES_URL}${item.img1}" alt="${item.title}"/></div>`;
+            }
+                if (item.img2) 
+            {
+                promptHtml += `<div class="bonus-image-2"><img src="${IMAGES_URL}${item.img2}" alt="${item.title}"/></div>`;
+            }
+                if (item.img3) 
+            {
+                promptHtml += `<div class="bonus-image-3"><img src="${IMAGES_URL}${item.img3}" alt="${item.title}"/></div>`;
+            }
+            promptHtml += '</div>';
         }
-        promptHtml += `</a>`;
+          promptHtml += `</a>`;
       }
       promptHtml += `</div></section>`;
       htmlResult

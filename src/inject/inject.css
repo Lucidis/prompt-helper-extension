@@ -160,24 +160,93 @@ html[data-theme="dark"]{
     z-index: 2;
     position: relative;
 }
-.prompt-group-item:hover img {
-    transform: scale(0.95);
+
+.prompt-group-item:hover img{
+    transform:scale(.95)
 }
+
 .prompt-group-item .preview-image{
     width:150px;
     height:150px;
-    pointer-events: none;
+    pointer-events:none
 }
+
 .prompt-group-item .preview-image img{
     width:100%;
     height:100%;
-    position: relative;
-    transition: transform .2s ease-in-out;
+    position:relative;
+    transition:transform .2s ease-in-out;
+	z-index: -1;
 }
-.prompt-group-item:hover .preview-image{
+
+.prompt-group-item:hover .bonus-image-1 img{
+	position: relative;
+	right: 175px;
+	opacity: 1;
+	transform: scale(1.15);
+	z-index: 1;
+}
+
+.prompt-group-item .bonus-image-1 img{
+    width:100%;
+    height:100%;
+    position:relative;
+	bottom: 168px;
+	opacity: 0;
+	transform: scale(.01);
+	transition: transform .2s ease-in-out;
+	transition-delay: 0.1s;
+	z-index: -2;
+}
+
+.prompt-group-item:hover .bonus-image-2 img{
+	position: relative;
+	right: 175px;
+	opacity: 1;
+	transform: scale(1.15);
+	z-index: 1;
+}
+
+.prompt-group-item .bonus-image-2 img{
+    width:100%;
+    height:100%;
+    position:relative;
+	bottom: 137px;
+	opacity: 0;
+	transform: scale(.01);
+	transition: transform .2s ease-in-out;
+	transition-delay: 0.2s;
+	z-index: -2;
+}
+
+.prompt-group-item:hover .bonus-image-3 img{
+	position: relative;
+	left: 11px;
+	opacity: 1;
+	transform: scale(1.15);
+	z-index: 1;
+}
+
+.prompt-group-item .bonus-image-3 img{
+    width:100%;
+    height:100%;
+    position:relative;
+	bottom: 295px;
+	opacity: 0;
+	transform: scale(.01);
+	transition: transform .2s ease-in-out;
+	transition-delay: 0.3s;
+	z-index: -2;
+}
+
+.prompt-group-item:hover #main-image {
     opacity: 1;
-   
 }
+
+.prompt-group-items:hover .prompt-group-item:not(:hover) {
+	opacity: 0.5;
+}
+
 :root{
     --darkmode-toggle-size: 4rem;
 }
