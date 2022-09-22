@@ -420,7 +420,7 @@ async function imageCollector(images, imageCount, totalBatches, currentBatch, i,
         }
         currentBatch++;
         let zipContent = await zip.generateAsync({ type: "blob", streamFiles: true }, function updateCallback(metadata) {
-            document.getElementById('progress-bar').innerText = 'Downloading batch ' + currentBatch.toString() + 'of ' + totalBatches.toString() + '... ' + metadata.percent.toFixed(2).toString() + '%';
+            document.getElementById('progress-bar').innerText = 'Downloading batch ' + currentBatch.toString() + ' of ' + totalBatches.toString() + '... ' + metadata.percent.toFixed(2).toString() + '%';
         })
         saveAs(zipContent, `Collection Batch ${currentBatch}.zip`);
         iCount += 1000;
@@ -460,7 +460,7 @@ async function imageCollector(images, imageCount, totalBatches, currentBatch, i,
         }
         currentBatch++;
         let zipContent = await zip.generateAsync({ type: "blob", streamFiles: true }, function updateCallback(metadata) {
-            document.getElementById('progress-bar').innerText = 'Downloading batch ' + currentBatch.toString() + 'of ' + totalBatches.toString() + '... ' + metadata.percent.toFixed(2).toString() + '%';
+            document.getElementById('progress-bar').innerText = 'Downloading batch ' + currentBatch.toString() + ' of ' + totalBatches.toString() + '... ' + metadata.percent.toFixed(2).toString() + '%';
         })
         saveAs(zipContent, `Collection Batch ${currentBatch}.zip`);
     }

@@ -318,7 +318,7 @@ html[data-theme="dark"]{
 }
 
 #download-button svg{
-width: 14px;
+width: 14x;
 height: 14px;
 }
 
@@ -341,6 +341,11 @@ height: 14px;
 }
 
 #webhook-button svg{
+width: 14px;
+height: 14px;
+}
+
+#bulk-download-button svg{
 width: 14px;
 height: 14px;
 }
