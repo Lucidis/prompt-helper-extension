@@ -7,6 +7,7 @@ import { saveAs } from 'file-saver';
 import { uniq } from 'lodash';
 //injecting css here is the way to do HMR properly in a chrome extension
 import './inject.css'
+import { current } from '../../node_modules/tailwindcss/colors';
 
 let injected = function () {
   return !!document.querySelector("#prompt-helper-btn");
@@ -292,6 +293,179 @@ let injectDownloadButton = async function () {
   document.querySelector(".task-page-generations").appendChild(downloadButton);
 }
 
+
+// Creates a button on the Collection / Favorites page that automatically downloads all images
+let injectBulkDownloadButton = async function () {
+    let bulkDownloadButton = document.createElement("div");
+    bulkDownloadButton.id = "bulk-download-button";
+    bulkDownloadButton.className = "body-small link-style";
+    bulkDownloadButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+  <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+</svg>&nbsp;Download Collection to Zip`;
+    bulkDownloadButton.addEventListener("click", async function (e) {
+
+        // Automatically scrolls down the page with slight delays during scrolling to give new content time to load
+        // When it detects that the page has no more content to load, it will run the image scraper function
+        var notChangedStepsCount = 0;
+        var scrollInterval = setInterval(function () {
+            if ((document.documentElement.scrollTop + window.innerHeight) != document.documentElement.scrollHeight) {
+                // scrolling
+                notChangedStepsCount = 0;
+                document.documentElement.scrollTop = document.documentElement.scrollHeight;
+            }
+            else if (notChangedStepsCount > 3) {
+                // no more space to scroll
+                document.documentElement.scrollTop = 0;
+                clearInterval(scrollInterval);
+            }
+            else if (notChangedStepsCount == 3) {
+                imageScraper();
+                notChangedStepsCount++;
+            }
+            else if (notChangedStepsCount < 3) {
+                // waiting for possible extension (autoload) of the page
+                document.documentElement.scrollTop += -100;
+                document.documentElement.scrollTop += 100;
+                notChangedStepsCount++;
+            }
+        }, 1000);
+    });
+    document.querySelector(".my-collection-tabs").appendChild(bulkDownloadButton);
+
+    // Necessary CSS alteration to enable scrolling via javascript
+    const root = document.querySelector("#root");
+    root.style.height = "auto";
+}
+
+async function imageScraper() {
+    // References all of the images in the collection
+    let images = document.querySelectorAll(".generated-image img");
+    let imageCount = images.length;
+
+    // Images must be downloaded in batches to avoid running out of memory in very large collections
+    // Batches greater than 1000 images are very likely to crash
+    if (imageCount <= 1000) {
+        var totalBatches = 1;
+    }
+    else if (imageCount % 1000 == 0) {
+        var totalBatches = imageCount / 1000;
+    }
+    else {
+        var totalBatches = (imageCount / 1000) + 1;
+    }
+    let currentBatch = 0;
+
+    // Index to be incremented while processing images. iLimit controls for batch size.
+    let i = 0;
+    let iLimit = 1000;
+
+    // Displays report of number of images processed, batch number, and download percentage
+    let progressBar = document.createElement("div");
+    progressBar.id = "progress-bar";
+    document.querySelector("#bulk-download-button").appendChild(progressBar)
+
+    // Reference to the button that will be "clicked" on to discover prompt information
+    let detailedImage = document.querySelectorAll('.paginated-generations-item');
+
+    // Begins the image collection process
+    imageCollector(images, imageCount, totalBatches, currentBatch, i, iLimit, detailedImage);
+}
+
+async function imageCollector(images, imageCount, totalBatches, currentBatch, i, iLimit, detailedImage) {
+    var zip = new JSZip();
+
+    let signature = document.createElement('img');
+    let url = svgToDataURL(document.querySelector(".image-signature").outerHTML);
+    await storage.local.get().then(function (result) {
+        console.log(result);
+        //read storage and include or exclude watermark based on preference
+        signature.src = (result.watermark !== 'exclude') ? url : '';
+    });
+
+    // Indicates that there are more batches to process after this cycle
+    if (imageCount >= iLimit) {
+        for (i; i < iLimit; i++) {
+            // Automatically clicks on each image in the collection to expose prompt details
+            detailedImage[i].click();
+
+            // Normal generations and image edits have their prompt text saved to a txt file
+            if (document.querySelector("h3")) {
+                let promptText = document.querySelector("h3").textContent;
+                zip.file(`${imageCount - i}.txt`, `Prompt: ${promptText}`);
+            }
+            // Obtains prompt text for variation images does not seem possible, so a URL to the original image is saved instead
+            else {
+                let variantSource = document.querySelector(".gen-detail-prompt-img").innerHTML;
+                variantSource = variantSource.slice(100);
+                variantSource = variantSource.replace('"><svg xmlns="http://www.w3.org/2000/svg" width="80" height="16" viewBox="0 0 80 16" class="image-signature"><path d="M0 0h16v16H0z" fill="#ff6"></path><path d="M16 0h16v16H16z" fill="#42ffff"></path><path d="M32 0h16v16H32z" fill="#51da4c"></path><path d="M48 0h16v16H48z" fill="#ff6e3c"></path><path d="M64 0h16v16H64z" fill="#3c46ff"></path></svg><div class="prompt-img-overlay"></div><div class="prompt-img-header caption">ORIGINAL</div></div>', '');
+                for (let j = 0; j < 13; j++) {
+                    variantSource = variantSource.replace('&amp;', '&');
+                }
+                zip.file(`${imageCount - i}.txt`, `Variant Source Image Link: ${variantSource}`);
+            }
+            // Continuously updates the progress report
+            document.getElementById('progress-bar').innerText = 'Images Processed: ' + i.toString() + ' / ' + imageCount.toString();
+
+            // Image processing
+            let img = images[i];
+            let canvas = document.createElement("canvas");
+            canvas.width = canvas.height = 1024;
+            let ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0);
+            ctx.drawImage(signature, canvas.width - 80, canvas.height - 16);
+            let blob = await new Promise((resolve, reject) => {
+                canvas.toBlob(resolve, "image/png");
+            })
+            zip.file(`${imageCount - i}.png`, blob);
+        }
+        currentBatch++;
+        let zipContent = await zip.generateAsync({ type: "blob", streamFiles: true }, function updateCallback(metadata) {
+            document.getElementById('progress-bar').innerText = 'Downloading batch ' + currentBatch.toString() + 'of ' + totalBatches.toString() + '... ' + metadata.percent.toFixed(2).toString() + '%';
+        })
+        saveAs(zipContent, `Collection Batch ${currentBatch}.zip`);
+        iCount += 1000;
+
+        // Begins the image collection process again while retaining progress
+        imageCollector(images, imageCount, totalBatches, currentBatch, i, iLimit, detailedImage);
+    }
+    // Same process as above, but for the final (or only) batch
+    else {
+        for (i; i < imageCount; i++) {
+            detailedImage[i].click();
+            if (document.querySelector("h3")) {
+                let promptText = document.querySelector("h3").textContent;
+                zip.file(`${imageCount - i}.txt`, `Prompt: ${promptText}`);
+            }
+            else {
+                let variantSource = document.querySelector(".gen-detail-prompt-img").innerHTML;
+                variantSource = variantSource.slice(100);
+                variantSource = variantSource.replace('"><svg xmlns="http://www.w3.org/2000/svg" width="80" height="16" viewBox="0 0 80 16" class="image-signature"><path d="M0 0h16v16H0z" fill="#ff6"></path><path d="M16 0h16v16H16z" fill="#42ffff"></path><path d="M32 0h16v16H32z" fill="#51da4c"></path><path d="M48 0h16v16H48z" fill="#ff6e3c"></path><path d="M64 0h16v16H64z" fill="#3c46ff"></path></svg><div class="prompt-img-overlay"></div><div class="prompt-img-header caption">ORIGINAL</div></div>', '');
+                for (let j = 0; j < 13; j++) {
+                    variantSource = variantSource.replace('&amp;', '&');
+                }
+                zip.file(`${imageCount - i}.txt`, `Variant Source Image Link: ${variantSource}`);
+            }
+
+            document.getElementById('progress-bar').innerText = 'Images Processed: ' + i.toString() + ' / ' + imageCount.toString();
+            let img = images[i];
+            let canvas = document.createElement("canvas");
+            canvas.width = canvas.height = 1024;
+            let ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0);
+            ctx.drawImage(signature, canvas.width - 80, canvas.height - 16);
+            let blob = await new Promise((resolve, reject) => {
+                canvas.toBlob(resolve, "image/png");
+            })
+            zip.file(`${imageCount - i}.png`, blob);
+        }
+        currentBatch++;
+        let zipContent = await zip.generateAsync({ type: "blob", streamFiles: true }, function updateCallback(metadata) {
+            document.getElementById('progress-bar').innerText = 'Downloading batch ' + currentBatch.toString() + 'of ' + totalBatches.toString() + '... ' + metadata.percent.toFixed(2).toString() + '%';
+        })
+        saveAs(zipContent, `Collection Batch ${currentBatch}.zip`);
+    }
+}
+
 let injectWebhookButton = async function () {
  
   let webhookButton = document.createElement("div");
@@ -354,11 +528,14 @@ var observer = new MutationObserver((mutationsList) => {
       }
 
       // check if .task-page-generations is present
-      if (document.querySelector(".task-page-flag-desktop") && !document.querySelector("#download-button")) {
+        if (document.querySelector(".task-page-flag-desktop") && !document.querySelector("#download-button")) {
         injectDownloadButton();
       }
+        if (document.querySelector(".paginated-generations") && !document.querySelector("#bulk-download-button")) {
+        injectBulkDownloadButton();
+      }
       // check if .task-page-generations is present
-      if (document.querySelector(".task-page-flag-desktop") && !document.querySelector("#webhook-button")) {
+        if (document.querySelector(".task-page-flag-desktop") && !document.querySelector("#webhook-button")) {
         injectWebhookButton();
       }
     }
